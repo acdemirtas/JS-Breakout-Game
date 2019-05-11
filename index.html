@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Javascript Breakout Game</title>
+    <!-- Anıl Can Demirtaş -->
+    <!-- 09.05.2019 -->
+
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        .myDiv {
+            text-align: center;
+        }
+    </style>
+
+</head>
+<body>
+
+<div class="myDiv">
+  <canvas id="myCanvas" width="480" height="360" style="border:1px solid #000000;"></canvas><br>
+  <span id="mySpan"></span>
+</div>
+
+<script>
+    //Coordinate System in canvas starts from top left corner!
+    var canvas = document.getElementById("myCanvas");
+    var scoreLabel = document.getElementById("mySpan");
+    var ctx = canvas.getContext("2d");
+    //Initial point of the ball
+    var x = canvas.width / 3;
+    var y = canvas.height - 30;
+
+    var dx = 2;
+    var dy = -2;
+
+    //Ball Properties
+    var ballRadius = 10;
+    var ballColor="#0BCAF3";
+
+
+    var score = 0;
+
+    //Paddle Properties
+    var paddleHeight = 10;
+    var paddleWidth = 75;
+    //Starting point of paddle on x-axis
+    var paddleX = (canvas.width - paddleWidth) / 2;
+
+    //Keyboard Controls
+    var rightPressed = false;
+    var leftPressed = false;
+
+    //collision status (1=Not hit  0=Hit)
+    var statusRed = 1;
+    var statusBlue = 1;
+    var statusGreen = 1;
+    var statusPurple = 1;
+    var statusYellow = 1;
+
+
+    //if statement counters to prevent double collision check on the same brick
+    var redCount = 0;
+    var blueCount = 0;
+    var greenCount = 0;
+    var purpleCount = 0;
+    var yellowCount = 0;
+
+
+    function drawBricks() {
+        if (statusRed == 1) {
+
+            ctx.beginPath();
+            ctx.rect(30, 40, 120, 30);
+            ctx.fillStyle = "#FF0000";
+            ctx.fill();
+            ctx.closePath();
+        }
+        if (statusBlue == 1) {
+            ctx.beginPath();
+            ctx.rect(180, 40, 120, 30);
+            ctx.fillStyle = "#0000FF";
+            ctx.fill();
+            ctx.closePath();
+        }
+        if (statusGreen == 1) {
+            ctx.beginPath();
+            ctx.rect(330, 40, 120, 30);
+            ctx.fillStyle = "#00FF00";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        if (statusPurple == 1) {
+            ctx.beginPath();
+            ctx.rect(90, 100, 120, 30);
+            ctx.fillStyle = "#800080";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+
+        if (statusYellow == 1) {
+            ctx.beginPath();
+            ctx.rect(270, 100, 120, 30);
+            ctx.fillStyle = "#FFFF00";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        //Black Obstacle
+        ctx.beginPath();
+        ctx.rect(170, 190, 140, 10);
+        ctx.fillStyle = "#000000";
+        ctx.fill();
+        ctx.closePath();
+
+    }
+
+
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+        ctx.fillStyle = ballColor;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawPaddle() {
+        ctx.beginPath();
+        ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+        ctx.fillStyle = "#0BCAF3";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+
+    //General drawing function
+    function draw() {
+        //Clear canvas with each refresh
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        //Draw all necessary elements on canvas with executing all drawing functions
+        drawBall();
+        drawPaddle();
+        drawBricks();
+        collisionDetection();
+        drawScore();
+        //Next position of the ball
+        x = x + dx;
+        y = y + dy;
+
+        /*Check if ball collides with walls
+        //When the distance between the center of the ball and the edge of
+        the wall is the same as the radius of the ball it means collision
+        happened.
+        */
+        if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+            dx = -dx;
+        }
+        if (y + dy < ballRadius) {
+            dy = -dy;
+        } else if (y + dy > canvas.height - ballRadius) {
+            if (x + 10 > paddleX && x - 10 < paddleX + paddleWidth) {
+                dy = -dy;
+            } else {
+                alert("GAME OVER");
+                document.location.reload();
+                clearInterval(interval); // Needed for Chrome to end game
+            }
+        }
+
+        /*Paddle movement with arrow keys.Paddle can only move inside
+        * the canvas boundaries*/
+
+        if (rightPressed && paddleX < canvas.width - paddleWidth) {
+            paddleX += 7;
+        } else if (leftPressed && paddleX > 0) {
+            paddleX -= 7;
+        }
+
+        if (score == 250) {
+            clearInterval(interval); // Needed for Chrome to end game
+            setTimeout(alertGiver,100)
+        }
+            function alertGiver() {
+                alert("CONGRATULATIONS!");
+                //document.location.reload();
+                clearInterval(interval); // Needed for Chrome to end game
+
+            }
+
+        }
+
+        /*Event listeners for key presses, will execute keyDownHandler
+        * and keyUpHandler when the keyboard keys are pressed*/
+        document.addEventListener("keydown", keyDownHandler, false);
+        document.addEventListener("keyup", keyUpHandler, false);
+
+        /*When keys are pressed,variable will set to true,back to
+        false when released
+         */
+        function keyDownHandler(e) {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = true;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = false;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = false;
+            }
+        }
+
+        function collisionDetection() {
+            //for red brick
+            if (x > 30 && x < 150 && y > 40 && y < 70 && redCount == 0) {
+                dy = -dy;
+                statusRed = 0;
+                redCount++;
+                score += 20;
+                ballColor="#FF0000";
+            }
+            //for blue brick
+            if (x > 180 && x < 300 && y > 40 && y < 70 && blueCount == 0) {
+                dy = -dy;
+                statusBlue = 0;
+                blueCount++;
+                score += 40;
+                ballColor="#0000FF";
+            }
+            //for green brick
+            if (x > 330 && x < 450 && y > 40 && y < 70 && greenCount == 0) {
+                dy = -dy;
+                statusGreen = 0;
+                greenCount++;
+                score += 80;
+                ballColor="#00FF00";
+            }
+            //for purple brick
+            if (x > 90 && x < 210 && y > 100 && y < 130 && purpleCount == 0) {
+                dy = -dy;
+                statusPurple = 0;
+                purpleCount++;
+                score += 60;
+                ballColor="#800080";
+            }
+            //for yellow brick
+            if (x > 270 && x < 390 && y > 100 && y < 130 && yellowCount == 0) {
+                dy = -dy;
+                statusYellow = 0;
+                yellowCount++;
+                score += 50;
+                ballColor="#FFFF00";
+            }
+            //for black obstacle
+            if (x > 170 && x < 310 && y > 190 && y < 200) {
+                dy = -dy;
+            }
+
+        }
+
+        function drawScore() {
+            /*
+            ctx.font = "14px Arial";
+            ctx.fillStyle = "#000000";
+            ctx.fillText("Score: " + score, 212, 190);
+            */
+            scoreLabel.innerHTML = "Score: " + score;
+        }
+
+
+        var interval = setInterval(draw, 10);
+
+
+</script>
+
+
+</body>
+</html>
